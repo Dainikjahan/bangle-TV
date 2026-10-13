@@ -30,19 +30,51 @@ export type FederationRelationship =
   | 'BLOCK'
   | 'UNFOLLOW';
 
+export type StreamProtocol = 'hls' | 'dash' | 'youtube' | 'mp4' | 'direct';
+
+export type TimeshiftStoragePolicy = 
+  | 'IN_MEMORY_EPHEMERAL' 
+  | 'CLIENT_INDEXEDDB' 
+  | 'DISABLED_BY_RIGHTSHOLDER';
+
+export interface TimeshiftPolicy {
+  allowed: boolean;
+  maxBufferMinutes: number; // e.g. 15, 30, 60, 120 minutes
+  storagePolicy: TimeshiftStoragePolicy;
+  rightsHolderAttribution?: string;
+  allowOfflineCache?: boolean;
+}
+
+export interface EpgProgram {
+  id: string;
+  channelId: string;
+  title: string;
+  description: string;
+  startTime: string; // HH:MM or ISO
+  endTime: string;
+  durationMinutes: number;
+  category: ContentCategory;
+  rating?: string;
+  isCurrent?: boolean;
+}
+
 export interface BroadcastItem {
   id: string;
+  channelNumber?: number;
   title: string;
   category: ContentCategory | 'breaking' | 'national' | 'citizen' | 'investigative' | 'economy' | 'tech';
   categoryLabel: string;
-  reporter: string;
+  reporter?: string;
   location: string;
   duration: number; // in seconds
-  videoUrl: string; // fallback mp4 or direct url
-  youtubeId?: string; // YouTube video ID for dry run loop playout
-  isShort?: boolean; // YouTube Short / Vertical Mobile Dispatch
-  sourceNetwork?: 'Al Jazeera' | 'BBC News' | 'Al Jazeera 101 East' | 'BBC Eye' | 'DW News' | 'Bengal TV Studio' | 'Banglar Darpan LIVE' | 'UK SOA Intelligence' | 'gaan and fun' | string;
+  videoUrl: string; // HLS .m3u8, direct mp4 or embed
+  hlsUrl?: string; // Direct HLS stream URL for HLS.js
+  backupStreams?: string[]; // Resilient backup stream URLs
+  streamType?: StreamProtocol;
+  youtubeId?: string; // YouTube video/live ID for free playout
+  sourceNetwork?: string;
   thumbnailUrl: string;
+  logoUrl?: string;
   regulatoryApproved: boolean;
   complianceScore: number;
   uploadedAt: string;
@@ -50,8 +82,11 @@ export interface BroadcastItem {
   isLive?: boolean;
   description: string;
   openSourceLicense: string;
+  currentProgramTitle?: string;
+  currentProgramCategory?: string;
+  epgSchedule?: EpgProgram[];
   
-  // Open IPTV Federation Properties
+  // Open IPTV Federation Sovereign Properties
   ownerCommunityId?: string;
   communityName?: string;
   distributionScope?: DistributionScope;
@@ -65,13 +100,14 @@ export interface BroadcastItem {
   contentHash?: string;
   metadataHash?: string;
   federationReversible?: boolean;
+  timeshiftPolicy?: TimeshiftPolicy;
 }
 
 export interface RegulatoryDeclaration {
   factualAccuracy: boolean;
   noHateSpeechOrDefamation: boolean;
   copyrightClearance: boolean;
-  noThirdPartyWatermark: boolean; // Guaranteed raw footage so Bengal TV Crown logo can be cleanly applied
+  noThirdPartyWatermark: boolean;
   publicInterestCompliance: boolean;
   distributionScopeExplicitConsent: boolean;
   communitySovereigntyAcknowledged: boolean;
@@ -131,4 +167,25 @@ export interface EmergencyKillSwitchState {
   streamDisable: boolean;
   userDisable: boolean;
   apiDisable: boolean;
+}
+
+export interface AiModerationResult {
+  id: string;
+  title: string;
+  detectedLanguage: string;
+  suggestedCategory: ContentCategory;
+  suggestedAgeRating: 'ALL' | '12+' | '16+' | '18+';
+  complianceStatus: 'APPROVED' | 'FLAGGED_FOR_REVIEW' | 'REJECTED';
+  riskScore: number; // 0 to 100
+  policyChecks: {
+    noHateSpeech: boolean;
+    noGraphicViolence: boolean;
+    licensingAwareness: boolean;
+    privacyRespect: boolean;
+    noPropaganda: boolean;
+  };
+  reasoning: string;
+  reviewedByHuman?: boolean;
+  reviewerNotes?: string;
+  timestamp: string;
 }
